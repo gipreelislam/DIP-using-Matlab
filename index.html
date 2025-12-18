@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Filter Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            height: fit-content;
+        }
+
+        .sidebar h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .filter-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.9rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover:not(:disabled) {
+            background: #e5e7eb;
+            transform: translateX(4px);
+        }
+
+        .filter-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .upload-section,
+        .preview-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-zone {
+            border: 3px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone h3 {
+            font-size: 1.3rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: #9ca3af;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .preview-header h2 {
+            font-size: 1.3rem;
+            color: #333;
+        }
+
+        .upload-new-btn {
+            padding: 0.7rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-new-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            padding: 1rem;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            color: #991b1b;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .image-comparison {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #f3f4f6;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: col-resize;
+            user-select: none;
+        }
+
+        .image-comparison img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: white;
+        }
+
+        .filtered-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            clip-path: inset(0 50% 0 0);
+        }
+
+        .slider-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .slider-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .image-label {
+            position: absolute;
+            top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .label-left {
+            left: 1rem;
+        }
+
+        .label-right {
+            right: 1rem;
+        }
+
+        .placeholder-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #9ca3af;
+            font-size: 1.2rem;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Parameter Input Overlay */
+        .param-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            min-width: 400px;
+            display: none;
+        }
+
+        .param-overlay.show {
+            display: block;
+        }
+
+        .param-overlay h3 {
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .param-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .param-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .param-group input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .param-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .param-group small {
+            display: block;
+            margin-top: 0.3rem;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        .param-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .param-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .param-btn.apply {
+            background: #667eea;
+            color: white;
+        }
+
+        .param-btn.apply:hover {
+            background: #5568d3;
+        }
+
+        .param-btn.cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .param-btn.cancel:hover {
+            background: #e5e7eb;
+        }
+
+        .overlay-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 99;
+            display: none;
+        }
+
+        .overlay-backdrop.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Image Filter Studio</h1>
+            <p>Upload an image and apply creative filters</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <h2>🎨 Filters</h2>
+                <div class="filter-list" id="filterList">
+                    <button class="filter-btn" data-filter="rgb2gray"
+                        data-params='[{"name":"option","label":"Option","default":"1","hint":"1 or 2"}]' disabled>RGB to
+                        Gray</button>
+                    <button class="filter-btn" data-filter="graytobinary"
+                        data-params='[{"name":"threshold","label":"Threshold","default":"128","hint":"0-255"}]'
+                        disabled>Gray to Binary</button>
+                    <button class="filter-btn" data-filter="rgb2binary" disabled>RGB to Binary</button>
+
+                    <button class="filter-btn" data-filter="brightness"
+                        data-params='[{"name":"Option","label":"option","default":"1","hint":"Option Value"},{"name":"value","label":"Value","default":"50","hint":"Value"}]'
+                        disabled>Brightness</button>
+                    <button class="filter-btn" data-filter="brightnessnew"
+                        data-params='[{"name":"brightness","label":"Brightness","default":"10","hint":" "}]'
+                        disabled>Brightness New</button>
+                    <button class="filter-btn" data-filter="negative" disabled>Negative</button>
+                    <button class="filter-btn" data-filter="histogram" data-type="histogram" disabled>Show
+                        Histogram</button>
+                    <button class="filter-btn" data-filter="contrast_stretching" disabled>Contrast Stretching</button>
+
+                    <button class="filter-btn" data-filter="histogram_eq" disabled>Histogram Equalization</button>
+                    <button class="filter-btn" data-filter="correlation"
+                        data-params='[{"name":"option","label":"Kernal","default":"1","hint":"Correaltion Value"}]'
+                        disabled>Correaltion</button>
+
+                    <button class="filter-btn" data-filter="mean_filter"
+                        data-params='[{"name":"option","label":"Filter Size","default":"1","hint":"Filter Size"}]'
+                        disabled>Mean Filter</button>
+                    <button class="filter-btn" data-filter="weight_filter"
+                        data-params='[{"name":"option","label":"Kernal","default":"1","hint":"Correaltion Value"}]'
+                        disabled>Weight Filter</button>
+                    <button class="filter-btn" data-filter="point_detection" disabled>Point Detection</button>
+                    <button class="filter-btn" data-filter="min_filter"
+                        data-params='[{"name":"option","label":"Filter Size","default":"1","hint":"Filter Size"}]'
+                        disabled>Min Filter</button>
+                    <button class="filter-btn" data-filter="median_filter"
+                        data-params='[{"name":"option","label":"Filter Size","default":"1","hint":"Filter Size"}]'
+                        disabled>Median Filter</button>
+
+                    <button class="filter-btn" data-filter="fourier_transform" disabled>Fourier Transform</button>
+                    <button class="filter-btn" data-filter="inv_fourier_transform" disabled>Inverse Fourier
+                        Transform</button>
+
+                    <button class="filter-btn" data-filter="ideal_low_pass"
+                        data-params='[{"name":"option","label":"Cutoff","default":"1","hint":" "}]' disabled>Ideal Low
+                        Pass</button>
+                    <button class="filter-btn" data-filter="ideal_high_pass"
+                        data-params='[{"name":"option","label":"Cutoff","default":"1","hint":" "}]' disabled>Ideal High
+                        Pass</button>
+                    <button class="filter-btn" data-filter="butter_worth_low_pass"
+                        data-params='[{"name":"k","label":"Cutoff","default":"5","hint":" "},{"name":"theta","label":"Order","default":"10","hint":" "}]'
+                        disabled>Butterworth Low Pass</button>
+                    <button class="filter-btn" data-filter="butter_worth_high_pass"
+                        data-params='[{"name":"k","label":"Cutoff","default":"5","hint":" "},{"name":"theta","label":"Order","default":"10","hint":" "}]'
+                        disabled>Butterworth High Pass</button>
+                    <button class="filter-btn" data-filter="gaussian_low_pass_filter"
+                        data-params='[{"name":"option","label":"Cutoff","default":"1","hint":" "}]' disabled>Gaussian
+                        Low Pass</button>
+                    <button class="filter-btn" data-filter="gaussian_high_pass_filter"
+                        data-params='[{"name":"option","label":"Cutoff","default":"1","hint":" "}]' disabled>Gaussian
+                        High Pass</button>
+
+                    <button class="filter-btn" data-filter="saltnpep"
+                        data-params='[{"name":"Noise Density","label":"noiseDensity","default":"0.5","hint":"0-1"}]'
+                        disabled>Salt & Pepper</button>
+                    <button class="filter-btn" data-filter="gaussian_noise"
+                        data-params='[{"name":"k","label":"m","default":"5","hint":" "},{"name":"theta","label":"Sig","default":"10","hint":" "},{"name":"theta","label":"Perc","default":"10","hint":""}]'
+                        disabled>Gaussian Noise</button>
+                    <button class="filter-btn" data-filter="rayleigh_noise"
+                        data-params='[{"name":"k","label":"X","default":"5","hint":"Number of iterations"},{"name":"theta","label":"Y","default":"10","hint":" "}]'
+                        disabled>Rayleigh Noise</button>
+                    <button class="filter-btn" data-filter="exponential_noise"
+                        data-params='[{"name":"option","label":"X","default":"1","hint":" "}]' disabled>Exponential
+                        Noise</button>
+                    <button class="filter-btn" data-filter="gamma_noise"
+                        data-params='[{"name":"k","label":"K value","default":"5","hint":"Number of iterations"},{"name":"theta","label":"Theta (θ)","default":"10","hint":"Scale parameter"}]'
+                        disabled>Gamma Noise</button>
+
+                    <button class="filter-btn" data-filter="erosion" disabled>Erosion</button>
+                    <button class="filter-btn" data-filter="dilation" disabled>Dilation</button>
+
+                    <button class="filter-btn" data-filter="open_img" disabled>Opening</button>
+                    <button class="filter-btn" data-filter="close_img" disabled>Closing</button>
+
+                    <button class="filter-btn" data-filter="log"
+                        data-params='[{"name":"option","label":"Constant","default":"5","hint":" "}]'
+                        disabled>Log</button>
+                    <button class="filter-btn" data-filter="max_filter"
+                        data-params='[{"name":"option","label":"filter size","default":"5","hint":" "}]' disabled>Max
+                        Filter</button>
+                    <button class="filter-btn" data-filter="gamma_corr"
+                        data-params='[{"name":"option","label":"filter size","default":"5","hint":" "}]' disabled>Gamma
+                        Correction</button>
+                    <button class="filter-btn" data-filter="uniform_noise"
+                        data-params='[{"name":"k","label":"Row Size","default":"5","hint":" "},{"name":"theta","label":"Col Size","default":"10","hint":""}]'
+                        disabled>Uniform Noise</button>
+
+                    <button class="filter-btn" data-filter="sobel"
+                        data-params='[{"name":"k","label":"Filter Type","default":"5","hint":"1 for Sobel, otherwise Robert"},{"name":"theta","label":"Direction","default":"1","hint":"1: Horizontal, 2: Vertical, 3: Left Diagonal, 4: Right Diagonal"},{"name":"theta","label":"Padding Method","default":"1","hint":"1: zero padding, 2: no padding, else: manual padding"}]'
+                        disabled>Line Detection</button>
+
+                    <button class="filter-btn" data-filter="sharpen" disabled>Sharpen</button> -->
+                    <button class="filter-btn" data-filter="edge_detection" disabled>Edge Detection</button>
+                    <button class="filter-btn" data-filter="vertical_edge_detection" disabled>Vertical Edge
+                        Detection</button>
+                    <button class="filter-btn" data-filter="point_sharpening"
+                        data-params='[{"name":"k","label":"Filter Size","default":"5","hint":" "},{"name":"theta","label":"Alpha","default":"10","hint":" "}]'
+                        disabled>Point Sharpening</button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content-area">
+                <!-- Upload Section -->
+                <div class="upload-section" id="uploadSection">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📤</div>
+                        <h3>Click to upload an image</h3>
+                        <p>PNG, JPG, or WEBP</p>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <!-- Preview Section -->
+                <div class="preview-section hidden" id="previewSection">
+                    <div class="preview-header">
+                        <h2>Preview</h2>
+                        <button class="upload-new-btn" id="uploadNewBtn">Upload New Image</button>
+                    </div>
+
+                    <div class="error-message" id="errorMessage">
+                        ⚠️ <span id="errorText"></span>
+                    </div>
+
+                    <div class="image-comparison" id="imageComparison">
+                        <img id="originalImage" alt="Original">
+
+                        <div class="filtered-container" id="filteredContainer">
+                            <img id="filteredImage" alt="Filtered">
+                        </div>
+
+                        <div class="slider-line" id="sliderLine">
+                            <div class="slider-handle">⟷</div>
+                        </div>
+
+                        <div class="image-label label-left">Original</div>
+                        <div class="image-label label-right">Filtered</div>
+
+                        <div class="placeholder-text" id="placeholderText">Select a filter to preview</div>
+
+                        <div class="loading-overlay" id="loadingOverlay">
+                            <div class="loading-content">
+                                <div class="spinner"></div>
+                                <span>Applying filter...</span>
+                            </div>
+                        </div>
+
+                        <!-- Parameter Input Overlay -->
+                        <div class="overlay-backdrop" id="overlayBackdrop"></div>
+                        <div class="param-overlay" id="paramOverlay">
+                            <h3 id="paramTitle">Filter Parameters</h3>
+                            <div id="paramInputs"></div>
+                            <div class="param-buttons">
+                                <button class="param-btn cancel" id="paramCancel">Cancel</button>
+                                <button class="param-btn apply" id="paramApply">Apply Filter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalImageData = null;
+        let sliderPosition = 50;
+        let currentFilter = null;
+        let currentParams = null;
+
+        // Elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const previewSection = document.getElementById('previewSection');
+        const uploadNewBtn = document.getElementById('uploadNewBtn');
+        const originalImage = document.getElementById('originalImage');
+        const filteredImage = document.getElementById('filteredImage');
+        const filteredContainer = document.getElementById('filteredContainer');
+        const sliderLine = document.getElementById('sliderLine');
+        const imageComparison = document.getElementById('imageComparison');
+        const placeholderText = document.getElementById('placeholderText');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const paramOverlay = document.getElementById('paramOverlay');
+        const overlayBackdrop = document.getElementById('overlayBackdrop');
+        const paramTitle = document.getElementById('paramTitle');
+        const paramInputs = document.getElementById('paramInputs');
+        const paramApply = document.getElementById('paramApply');
+        const paramCancel = document.getElementById('paramCancel');
+
+        // Upload handlers
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadNewBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    originalImageData = event.target.result;
+                    originalImage.src = originalImageData;
+
+                    uploadSection.classList.add('hidden');
+                    previewSection.classList.remove('hidden');
+
+                    // Enable filter buttons
+                    filterButtons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('active');
+                    });
+
+                    // Reset filtered image and slider
+                    resetPreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function resetPreview() {
+            filteredImage.src = '';
+            filteredContainer.style.display = 'none';
+            filteredContainer.style.clipPath = `inset(0 50% 0 0)`;
+            sliderLine.style.display = 'block';
+            sliderLine.style.left = '50%';
+            sliderPosition = 50;
+            document.querySelector('.label-left').style.display = 'block';
+            document.querySelector('.label-right').textContent = 'Filtered';
+            placeholderText.style.display = 'block';
+            errorMessage.classList.remove('show');
+        }
+
+        // Show parameter overlay
+        function showParamOverlay(filter, params) {
+            // Don't reset currentFilter here - it's already set
+
+            paramTitle.textContent = `${filter.charAt(0).toUpperCase() + filter.slice(1)} Parameters`;
+
+            // Build parameter inputs
+            paramInputs.innerHTML = '';
+            params.forEach(param => {
+                const group = document.createElement('div');
+                group.className = 'param-group';
+                group.innerHTML = `
+                    <label for="param_${param.name}">${param.label}</label>
+                    <input type="text" id="param_${param.name}" value="${param.default}" placeholder="${param.default}">
+                    <small>${param.hint}</small>
+                `;
+                paramInputs.appendChild(group);
+            });
+
+            paramOverlay.classList.add('show');
+            overlayBackdrop.classList.add('show');
+        }
+
+        // Hide parameter overlay
+        function hideParamOverlay() {
+            paramOverlay.classList.remove('show');
+            overlayBackdrop.classList.remove('show');
+        }
+
+        // Apply filter with parameters
+        async function applyFilterWithParams(filter, isHistogram) {
+            console.log('Applying filter:', filter);
+            console.log('Current params:', currentParams);
+
+            // Build filter command
+            let filterCommand = filter;
+            if (currentParams && currentParams.length > 0) {
+                currentParams.forEach(param => {
+                    const input = document.getElementById(`param_${param.name}`);
+                    const value = input.value || param.default;
+                    filterCommand += `|${value}`;
+                });
+            }
+
+            console.log('Filter command:', filterCommand);
+
+            // Show loading
+            loadingOverlay.classList.add('show');
+            errorMessage.classList.remove('show');
+
+            try {
+                // const requestBody = `${originalImageData}|${filterCommand}`;
+
+                // const response = await fetch('http://localhost:5051/filter', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'text/plain',
+                //     },
+                //     body: requestBody,
+                // });
+
+                // if (!response.ok) {
+                //     const errorData = await response.json().catch(() => ({}));
+                //     throw new Error(errorData.error || `Server error: ${response.status}`);
+                // }
+
+                // const contentType = response.headers.get('content-type');
+                // if (!contentType || !contentType.startsWith('image/')) {
+                //     const text = await response.text();
+                //     console.error('Unexpected response:', text);
+                //     throw new Error('Server did not return an image. Check console for details.');
+                // }
+
+                // const blob = await response.blob();
+                // const imageUrl = URL.createObjectURL(blob);
+
+                const response = await fetch("outputs/output_73996762095.png");
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+
+                filteredImage.src = imageUrl;
+                filteredContainer.style.display = 'block';
+                placeholderText.style.display = 'none';
+
+                // For histogram, make it full width
+                if (isHistogram) {
+                    filteredContainer.style.clipPath = 'none';
+                    sliderLine.style.display = 'none';
+                    document.querySelector('.label-left').style.display = 'none';
+                    document.querySelector('.label-right').textContent = 'Histogram';
+                } else {
+                    sliderPosition = 50;
+                    filteredContainer.style.clipPath = `inset(0 ${100 - sliderPosition}% 0 0)`;
+                    sliderLine.style.left = `${sliderPosition}%`;
+                    sliderLine.style.display = 'block';
+                    document.querySelector('.label-left').style.display = 'block';
+                    document.querySelector('.label-right').textContent = 'Filtered';
+                }
+
+            } catch (err) {
+                errorText.textContent = err.message;
+                errorMessage.classList.add('show');
+                filteredContainer.style.display = 'none';
+                placeholderText.style.display = 'block';
+            } finally {
+                loadingOverlay.classList.remove('show');
+            }
+        }
+
+        // Filter button click handlers
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!originalImageData || btn.disabled) return;
+
+                const filter = btn.dataset.filter;
+                const isHistogram = btn.dataset.type === 'histogram';
+                const paramsJson = btn.dataset.params;
+
+                // Update active state
+                filterButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Store current filter BEFORE showing overlay or applying
+                currentFilter = filter;
+
+                // If filter has parameters, show overlay
+                if (paramsJson) {
+                    const params = JSON.parse(paramsJson);
+                    currentParams = params;
+                    showParamOverlay(filter, params);
+                } else {
+                    // Apply filter directly (no parameters)
+                    currentParams = null;
+                    applyFilterWithParams(filter, isHistogram);
+                }
+            });
+        });
+
+        // Parameter overlay button handlers
+        paramApply.addEventListener('click', () => {
+            hideParamOverlay();
+            const isHistogram = currentFilter === 'histogram';
+            applyFilterWithParams(currentFilter, isHistogram);
+        });
+
+        paramCancel.addEventListener('click', () => {
+            hideParamOverlay();
+            filterButtons.forEach(b => b.classList.remove('active'));
+            // Reset the filter state when cancelled
+            currentFilter = null;
+            currentParams = null;
+        });
+
+        overlayBackdrop.addEventListener('click', () => {
+            hideParamOverlay();
+            filterButtons.forEach(b => b.classList.remove('active'));
+            // Reset the filter state when cancelled
+            currentFilter = null;
+            currentParams = null;
+        });
+
+        // Slider functionality
+        function updateSlider(e) {
+            if (!filteredImage.src) return;
+
+            const rect = imageComparison.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = (x / rect.width) * 100;
+            sliderPosition = Math.max(0, Math.min(100, percentage));
+
+            filteredContainer.style.clipPath = `inset(0 ${100 - sliderPosition}% 0 0)`;
+            sliderLine.style.left = `${sliderPosition}%`;
+        }
+
+        let isSliding = false;
+
+        imageComparison.addEventListener('mousedown', (e) => {
+            isSliding = true;
+            updateSlider(e);
+        });
+
+        imageComparison.addEventListener('mousemove', (e) => {
+            if (isSliding) {
+                updateSlider(e);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isSliding = false;
+        });
+    </script>
+</body>
+
+</html>
